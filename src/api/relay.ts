@@ -1,15 +1,17 @@
 // relay API 封装
 
 const RELAY_BASE = 'http://124.156.194.65:6688';
-const RELAY_ID = '41DEFE0E0D9F56B1A5355E6EC9B5CDCA';
+const RELAY_ID = '41DEFE0E0D9F56B1A5355E6EC9B5CDCA'; // Boss 的 clientId
 
 export interface RelayMessage {
   id: string;
+  originId?: string;
   from: string;
   to: string;
   text: string;
   time: number;
   session: string;
+  type?: string;
 }
 
 export interface PollResponse {
@@ -18,8 +20,9 @@ export interface PollResponse {
 
 export async function pollMessages(afterId?: string): Promise<RelayMessage[]> {
   try {
+    // afterId: use originId (string) for proper string comparison ordering
     const url = afterId
-      ? `${RELAY_BASE}/poll?id=${RELAY_ID}&after=${afterId}`
+      ? `${RELAY_BASE}/poll?id=${RELAY_ID}&after=${encodeURIComponent(afterId)}`
       : `${RELAY_BASE}/poll?id=${RELAY_ID}`;
     const res = await fetch(url, {
       method: 'GET',
@@ -37,32 +40,34 @@ export async function pollMessages(afterId?: string): Promise<RelayMessage[]> {
   }
 }
 
-export async function sendMessage(text: string): Promise<boolean> {
+export async function sendMessage(text: string): Promise<{ ok: boolean; msgId?: number; originId?: string }> {
   try {
     const res = await fetch(`${RELAY_BASE}/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        to: 'bot',
+        id: RELAY_ID,       // Boss 的 clientId - 用于正确路由
+        to: 'bot',          // 消息发给 bot
         text,
-        session: 'app',
+        session: 'app',     // 专属 app session
       }),
     });
     if (!res.ok) {
       console.error('send error', res.status);
-      return false;
+      return { ok: false };
     }
-    return true;
+    const data = await res.json();
+    return data;
   } catch (e) {
     console.error('send fetch error', e);
-    return false;
+    return { ok: false };
   }
 }
 
 export async function fetchStatus(): Promise<any> {
   try {
-    const res = await fetch(`${RELAY_BASE}/status`, {
+    // Try OpenClaw gateway status via relay proxy
+    const res = await fetch(`${RELAY_BASE}/oc-status`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
