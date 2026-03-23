@@ -43,6 +43,7 @@ export async function sendMessage(text: string): Promise<boolean> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         to: 'bot',
         text,
         session: 'app',

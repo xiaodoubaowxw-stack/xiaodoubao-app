@@ -25,7 +25,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   addMessages: (msgs) => {
     if (!msgs.length) return;
-    const newMsgs: ChatMessage[] = msgs.map((m) => ({
+    // Only show messages from/to the 'app' session (our app's session)
+    const appMsgs = msgs.filter((m) => m.session === 'app');
+    if (!appMsgs.length) return;
+    const newMsgs: ChatMessage[] = appMsgs.map((m) => ({
       id: m.id,
       from: m.from === 'bot' ? 'bot' : 'user',
       text: m.text,
@@ -37,7 +40,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return { messages: [...state.messages, ...unique] };
     });
     // update lastId to newest
-    const maxId = msgs.reduce((a, b) => (a.time > b.time ? a : b)).id;
+    const maxId = appMsgs.reduce((a, b) => (a.time > b.time ? a : b)).id;
     get().setLastId(maxId);
   },
 
